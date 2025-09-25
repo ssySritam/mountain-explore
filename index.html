@@ -1,0 +1,1011 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mountain Explorer — 3D, themes, animations</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #0b1220;
+            --bg-2: #0f172a;
+            --text: #e6eaf4;
+            --muted: #a9b0c2;
+            --primary: #76c7ff;
+            --accent: #a3ffbf;
+            --glass: rgba(255,255,255,0.06);
+            --border: rgba(255,255,255,0.12);
+            --card: rgba(255,255,255,0.08);
+            --shadow: 0 30px 80px rgba(0,0,0,0.35);
+            --blur: saturate(1.2) blur(10px);
+        }
+
+        body.theme-light {
+            --bg: #f6f7fb;
+            --bg-2: #eef0f7;
+            --text: #0e1320;
+            --muted: #57607a;
+            --primary: #2f6fed;
+            --accent: #16a34a;
+            --glass: rgba(255,255,255,0.75);
+            --border: rgba(20,20,30,0.08);
+            --card: rgba(255,255,255,0.9);
+            --shadow: 0 20px 60px rgba(24,37,104,0.18);
+            --blur: saturate(1.05) blur(6px);
+        }
+
+        body.theme-aurora {
+            --bg: #071019;
+            --bg-2: #0a1824;
+            --text: #e5fbff;
+            --muted: #9fd2d9;
+            --primary: #59ffe1;
+            --accent: #b2ff5e;
+            --glass: rgba(28, 255, 219, 0.08);
+            --border: rgba(90, 255, 225, 0.18);
+            --card: rgba(12, 38, 48, 0.55);
+            --shadow: 0 35px 80px rgba(14, 255, 214, 0.15);
+            --blur: saturate(1.25) blur(12px);
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html, body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+            color: var(--text);
+            background: radial-gradient(1200px 800px at 70% -50%, rgba(118,199,255,0.25), transparent), linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+            overflow-x: hidden;
+        }
+
+        .noise {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: .05;
+            mix-blend-mode: soft-light;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)" /></svg>');
+            background-size: 160px 160px;
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            backdrop-filter: var(--blur);
+            background: var(--glass);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            letter-spacing: .2px
+        }
+
+            .brand .logo {
+                width: 36px;
+                height: 36px;
+                border-radius: 12px;
+                background: radial-gradient(circle at 30% 30%, var(--primary), transparent 60%), radial-gradient(circle at 70% 70%, var(--accent), transparent 60%);
+                box-shadow: inset 0 0 20px rgba(255,255,255,0.15), 0 10px 24px rgba(0,0,0,0.25);
+            }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center
+        }
+
+        .btn {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            cursor: pointer;
+            transition: transform .2s ease, background .2s ease;
+        }
+
+            .btn:hover {
+                transform: translateY(-2px)
+            }
+
+        .theme-select {
+            appearance: none;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text)
+        }
+
+        /* Hero */
+        .hero {
+            position: relative;
+            height: 70vh;
+            min-height: 520px;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            padding-top: 72px;
+        }
+
+        #scene {
+            position: absolute;
+            inset: 0;
+            z-index: 0
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 900px;
+            padding: 20px;
+        }
+
+        .title {
+            font-size: clamp(28px, 5vw, 56px);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0 0 8px;
+            text-shadow: 0 6px 40px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            font-size: clamp(14px, 2.4vw, 18px);
+            color: var(--muted);
+            margin: 0 auto 18px;
+            max-width: 720px;
+        }
+
+        /* Search/filter bar */
+        .toolbar {
+            display: grid;
+            grid-template-columns: 1.2fr .8fr .8fr .6fr auto;
+            gap: 10px;
+            margin: 18px auto 0;
+            max-width: 980px;
+        }
+
+        .input, .select {
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--text);
+            width: 100%;
+        }
+
+        /* Main content */
+        main {
+            position: relative;
+            z-index: 1;
+            padding: 36px 20px 80px;
+        }
+
+        .section-title {
+            font-weight: 800;
+            font-size: 22px;
+            margin: 10px auto 18px;
+            max-width: 1100px
+        }
+
+        /* Cards grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1100px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr)
+            }
+        }
+
+        @media (max-width: 720px) {
+            .grid {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            transform-style: preserve-3d;
+            transition: transform .2s ease;
+        }
+
+            .card:hover {
+                transform: translateY(-4px)
+            }
+
+        .card-img {
+            position: relative;
+            height: 180px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.1));
+        }
+
+            .card-img img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                filter: contrast(1.02) saturate(1.05)
+            }
+
+        .pill {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            backdrop-filter: blur(8px);
+            background: var(--glass);
+            border: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .card-body {
+            padding: 14px
+        }
+
+        .name {
+            font-weight: 800;
+            font-size: 18px;
+            margin: 0 0 6px
+        }
+
+        .meta {
+            display: flex;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--muted);
+            flex-wrap: wrap
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px
+        }
+
+        .chip {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .open-btn {
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            color: #0b1020;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+        }
+
+        /* Suggestions */
+        .suggestions {
+            max-width: 1100px;
+            margin: 28px auto 0;
+            display: grid;
+            grid-template-columns: 1.2fr .8fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 940px) {
+            .suggestions {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .suggestions .panel {
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .panel h3 {
+            margin: 0 0 12px;
+            font-size: 18px
+        }
+
+        .list {
+            display: grid;
+            gap: 10px
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 12px;
+            background: var(--glass);
+            border: 1px solid var(--border)
+        }
+
+        .avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            overflow: hidden
+        }
+
+            .avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover
+            }
+
+        .li-title {
+            font-weight: 700
+        }
+
+        .li-meta {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            place-items: center;
+            z-index: 2000;
+            background: rgba(0,0,0,0.55);
+        }
+
+            .modal.active {
+                display: grid
+            }
+
+        .dialog {
+            width: min(860px, 92vw);
+            border-radius: 18px;
+            overflow: hidden;
+            background: var(--card);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow)
+        }
+
+        .dialog-header {
+            position: relative;
+            height: 280px;
+        }
+
+            .dialog-header img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                filter: saturate(1.1) contrast(1.05)
+            }
+
+        .dialog-content {
+            padding: 16px
+        }
+
+        .dialog-title {
+            font-weight: 800;
+            font-size: 22px;
+            margin: 0 0 6px
+        }
+
+        .dialog-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            cursor: pointer
+        }
+
+        /* Footer */
+        footer {
+            padding: 24px 20px 40px;
+            color: var(--muted);
+            text-align: center
+        }
+
+        /* Parallax layer gradient glow */
+        .glow {
+            position: absolute;
+            inset: -40% -20% auto auto;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(closest-side, rgba(118,199,255,0.22), transparent 60%);
+            filter: blur(40px);
+            z-index: 1;
+            opacity: .8;
+            transform: translate3d(0,0,0);
+        }
+    </style>
+</head>
+<body class="theme-aurora">
+    <div class="noise"></div>
+
+    <header>
+        <div class="brand">
+            <div class="logo" aria-hidden="true"></div>
+            <div>Mountain Explorer</div>
+        </div>
+        <div class="controls">
+            <select id="theme" class="theme-select" title="Theme">
+                <option value="theme-aurora">Aurora</option>
+                <option value="theme-light">Light</option>
+                <option value="theme-dark">Dark</option>
+            </select>
+            <button class="btn" id="shuffle">Shuffle</button>
+            <button class="btn" id="reset">Reset</button>
+        </div>
+    </header>
+
+    <section class="hero">
+        <canvas id="scene"></canvas>
+        <div class="glow"></div>
+        <div class="hero-content">
+            <h1 class="title">Discover iconic mountains in an immersive 3D world</h1>
+            <p class="subtitle">Search, sort, and explore elevations, regions, and routes. Smooth animations, layered glass UI, and a living WebGL backdrop set the tone.</p>
+
+            <div class="toolbar">
+                <input id="search" class="input" type="text" placeholder="Search mountains (e.g., Everest, Alps, Himalaya)" />
+                <select id="region" class="select">
+                    <option value="">All regions</option>
+                    <option value="Himalaya">Himalaya</option>
+                    <option value="Andes">Andes</option>
+                    <option value="Alps">Alps</option>
+                    <option value="Karakoram">Karakoram</option>
+                    <option value="Caucasus">Caucasus</option>
+                    <option value="Rockies">Rockies</option>
+                </select>
+                <select id="difficulty" class="select">
+                    <option value="">All difficulties</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Hard">Hard</option>
+                    <option value="Extreme">Extreme</option>
+                </select>
+                <select id="sort" class="select">
+                    <option value="name-asc">Name A→Z</option>
+                    <option value="name-desc">Name Z→A</option>
+                    <option value="elev-desc">Elevation high→low</option>
+                    <option value="elev-asc">Elevation low→high</option>
+                    <option value="country-asc">Country A→Z</option>
+                </select>
+                <button id="apply" class="btn">Apply</button>
+            </div>
+        </div>
+    </section>
+
+    <main>
+        <h2 class="section-title">Featured mountains</h2>
+        <div id="grid" class="grid"></div>
+
+        <div class="suggestions">
+            <div class="panel">
+                <h3>Suggested climbs by elevation</h3>
+                <div id="suggest-elev" class="list"></div>
+            </div>
+            <div class="panel">
+                <h3>Similar difficulty picks</h3>
+                <div id="suggest-diff" class="list"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        Crafted with Three.js, GSAP, and love for wild places. Smooth transitions, sensible defaults, keyboard-friendly modals, and adaptive themes.
+    </footer>
+
+    <!-- Modal -->
+    <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="dialog">
+            <div class="dialog-header">
+                <img id="modal-img" alt="Mountain image" />
+                <button class="dialog-close" id="modal-close">Close</button>
+            </div>
+            <div class="dialog-content">
+                <h3 class="dialog-title" id="modal-title">Mountain</h3>
+                <div id="modal-meta" class="meta"></div>
+                <p id="modal-desc" style="margin-top:12px"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>/* --------- Data --------- */
+const MOUNTAINS = [
+  {
+    id: 'everest',
+    name: 'Mount Everest',
+    country: 'Nepal/China',
+    region: 'Himalaya',
+    elevation: 8848,
+    difficulty: 'Extreme',
+    image: 'https://images.unsplash.com/photo-1549880181-acc1536f1a40?q=80&w=1600&auto=format&fit=crop',
+    desc: 'The roof of the world. Harsh jet stream winds, towering seracs, and thin air define the highest mountain on Earth.',
+  },
+  {
+    id: 'k2',
+    name: 'K2',
+    country: 'Pakistan/China',
+    region: 'Karakoram',
+    elevation: 8611,
+    difficulty: 'Extreme',
+    image: 'https://images.unsplash.com/photo-1519680772-8b1b0b4cc26c?q=80&w=1600&auto=format&fit=crop',
+    desc: 'Savage, steep, and technical. K2’s weather windows are narrow, and its ridges are unforgiving.',
+  },
+  {
+    id: 'kanchenjunga',
+    name: 'Kanchenjunga',
+    country: 'Nepal/India',
+    region: 'Himalaya',
+    elevation: 8586,
+    difficulty: 'Extreme',
+    image: 'https://images.unsplash.com/photo-1600788904310-6e7f6efebdd5?q=80&w=1600&auto=format&fit=crop',
+    desc: 'Remote and revered. Complex glaciers and treacherous cornices guard its five massive peaks.',
+  },
+  {
+    id: 'montblanc',
+    name: 'Mont Blanc',
+    country: 'France/Italy',
+    region: 'Alps',
+    elevation: 4808,
+    difficulty: 'Moderate',
+    image: 'https://images.unsplash.com/photo-1549880338-65ddcdfd017b?q=80&w=1600&auto=format&fit=crop',
+    desc: 'Accessible yet serious. Crevasses and rockfall make the “normal route” far from trivial.',
+  },
+  {
+    id: 'matterhorn',
+    name: 'Matterhorn',
+    country: 'Switzerland/Italy',
+    region: 'Alps',
+    elevation: 4478,
+    difficulty: 'Hard',
+    image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1600&auto=format&fit=crop',
+    desc: 'Iconic pyramid. Mixed rock and snow; weather flips quickly and crowds add complexity.',
+  },
+  {
+    id: 'aconcagua',
+    name: 'Aconcagua',
+    country: 'Argentina',
+    region: 'Andes',
+    elevation: 6961,
+    difficulty: 'Moderate',
+    image: 'https://images.unsplash.com/photo-1504438754887-1e31b90be24f?q=80&w=1600&auto=format&fit=crop',
+    desc: 'Highest in the Americas. Non-technical but brutally windy and high; altitude is the challenge.',
+  },
+  {
+    id: 'denali',
+    name: 'Denali',
+    country: 'USA',
+    region: 'Rockies',
+    elevation: 6190,
+    difficulty: 'Hard',
+    image: 'https://images.unsplash.com/photo-1680820048698-6d93a1d9c8a4?q=80&w=1600&auto=format&fit=crop',
+    desc: 'Subarctic cold, massive relief, and long glacier approaches make Denali a serious undertaking.',
+  },
+  {
+    id: 'elbrus',
+    name: 'Elbrus',
+    country: 'Russia',
+    region: 'Caucasus',
+    elevation: 5642,
+    difficulty: 'Moderate',
+    image: 'https://images.unsplash.com/photo-1529709115669-9462eafdc095?q=80&w=1600&auto=format&fit=crop',
+    desc: 'Volcanic twin summits. Weather swings rapidly; routes vary from snow slogs to crevassed traverse.',
+  },
+  {
+    id: 'annapurna',
+    name: 'Annapurna I',
+    country: 'Nepal',
+    region: 'Himalaya',
+    elevation: 8091,
+    difficulty: 'Extreme',
+    image: 'https://images.unsplash.com/photo-1519682577862-22b5f13cf64b?q=80&w=1600&auto=format&fit=crop',
+    desc: 'Infamous avalanche risk and complex route-finding; beauty matched by objective danger.',
+  },
+  {
+    id: 'alpamayo',
+    name: 'Alpamayo',
+    country: 'Peru',
+    region: 'Andes',
+    elevation: 5947,
+    difficulty: 'Hard',
+    image: 'https://images.unsplash.com/photo-1477414348580-1263f39f2085?q=80&w=1600&auto=format&fit=crop',
+    desc: 'Perfect fluted ice face. Technical climbing on ephemeral conditions; photogenic and committing.',
+  },
+];
+
+/* --------- Utilities --------- */
+const $ = (sel, ctx = document) => ctx.querySelector(sel);
+const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* --------- Theme --------- */
+const themeSelect = $('#theme');
+function applyTheme(val) {
+  document.body.classList.remove('theme-light','theme-dark','theme-aurora');
+  document.body.classList.add(val);
+}
+themeSelect.addEventListener('change', e => applyTheme(e.target.value));
+applyTheme(themeSelect.value);
+
+/* --------- Render cards --------- */
+const grid = $('#grid');
+let currentList = [...MOUNTAINS];
+
+function renderCards(list) {
+  grid.innerHTML = '';
+  list.forEach(m => {
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-img">
+        <img src="${m.image}" alt="${m.name}">
+        <span class="pill">${m.region}</span>
+      </div>
+      <div class="card-body">
+        <h3 class="name">${m.name}</h3>
+        <div class="meta">
+          <span>Country: ${m.country}</span>
+          <span>Elevation: ${m.elevation} m</span>
+          <span>Difficulty: ${m.difficulty}</span>
+        </div>
+        <div class="actions">
+          <span class="chip">ID: ${m.id}</span>
+          <button class="open-btn" data-id="${m.id}">Explore</button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    // tilt effect
+    card.addEventListener('pointermove', e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      const rx = (0.5 - y) * 6;
+      const ry = (x - 0.5) * 8;
+      card.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-4px)`;
+    });
+    card.addEventListener('pointerleave', () => {
+      card.style.transform = '';
+    });
+  });
+
+  // animate entrance
+  gsap.from($$('.card', grid), {
+    opacity: 0, y: 24, scale: 0.98, duration: 0.6, ease: 'power2.out', stagger: 0.05
+  });
+
+  // bind open
+  $$('.open-btn', grid).forEach(btn => btn.addEventListener('click', () => openModal(btn.dataset.id)));
+}
+
+/* --------- Filtering & sorting --------- */
+const searchInput = $('#search');
+const regionSelect = $('#region');
+const diffSelect = $('#difficulty');
+const sortSelect = $('#sort');
+$('#apply').addEventListener('click', applyFilters);
+$('#reset').addEventListener('click', () => {
+  searchInput.value = '';
+  regionSelect.value = '';
+  diffSelect.value = '';
+  sortSelect.value = 'name-asc';
+  currentList = [...MOUNTAINS];
+  renderCards(currentList);
+  computeSuggestions();
+});
+$('#shuffle').addEventListener('click', () => {
+  currentList = [...currentList].sort(() => Math.random() - 0.5);
+  renderCards(currentList);
+});
+
+function applyFilters() {
+  const q = searchInput.value.trim().toLowerCase();
+  const region = regionSelect.value;
+  const diff = diffSelect.value;
+  const sort = sortSelect.value;
+
+  let list = MOUNTAINS.filter(m => {
+    const matchQ = !q || m.name.toLowerCase().includes(q) || m.country.toLowerCase().includes(q) || m.region.toLowerCase().includes(q);
+    const matchR = !region || m.region === region;
+    const matchD = !diff || m.difficulty === diff;
+    return matchQ && matchR && matchD;
+  });
+
+  const sorters = {
+    'name-asc': (a,b) => a.name.localeCompare(b.name),
+    'name-desc': (a,b) => b.name.localeCompare(a.name),
+    'elev-desc': (a,b) => b.elevation - a.elevation,
+    'elev-asc': (a,b) => a.elevation - b.elevation,
+    'country-asc': (a,b) => a.country.localeCompare(b.country)
+  };
+  list.sort(sorters[sort] || sorters['name-asc']);
+  currentList = list;
+  renderCards(list);
+  computeSuggestions();
+}
+
+/* --------- Suggestions --------- */
+const sugElev = $('#suggest-elev');
+const sugDiff = $('#suggest-diff');
+
+function computeSuggestions() {
+  const elevTop = [...currentList].sort((a,b) => b.elevation - a.elevation).slice(0,4);
+  const freq = {};
+  currentList.forEach(m => freq[m.difficulty] = (freq[m.difficulty]||0) + 1);
+  const topDiff = Object.entries(freq).sort((a,b) => b[1]-a[1])[0]?.[0] || 'Moderate';
+  const diffPicks = currentList.filter(m => m.difficulty === topDiff).slice(0,4);
+
+  renderSuggestionList(sugElev, elevTop, m => `${m.elevation} m • ${m.region}`);
+  renderSuggestionList(sugDiff, diffPicks, m => `${m.country} • ${m.region}`);
+
+  gsap.from($$('.list-item', sugElev), { opacity:0, x:-18, duration:.5, ease:'power2.out', stagger:.05 });
+  gsap.from($$('.list-item', sugDiff), { opacity:0, x:18, duration:.5, ease:'power2.out', stagger:.05 });
+}
+
+function renderSuggestionList(container, list, metaFn) {
+  container.innerHTML = '';
+  list.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'list-item';
+    item.innerHTML = `
+      <div class="avatar"><img src="${m.image}" alt="${m.name}"/></div>
+      <div>
+        <div class="li-title">${m.name}</div>
+        <div class="li-meta">${metaFn(m)} • ${m.difficulty}</div>
+      </div>
+    `;
+    item.addEventListener('click', () => openModal(m.id));
+    container.appendChild(item);
+  });
+}
+
+/* --------- Modal --------- */
+const modal = $('#modal');
+const modalImg = $('#modal-img');
+const modalTitle = $('#modal-title');
+const modalMeta = $('#modal-meta');
+const modalDesc = $('#modal-desc');
+const modalClose = $('#modal-close');
+
+function openModal(id) {
+  const m = MOUNTAINS.find(x => x.id === id);
+  if(!m) return;
+  modalImg.src = m.image;
+  modalImg.alt = m.name;
+  modalTitle.textContent = m.name;
+  modalMeta.innerHTML = `<span>Country: ${m.country}</span><span>Elevation: ${m.elevation} m</span><span>Region: ${m.region}</span><span>Difficulty: ${m.difficulty}</span>`;
+  modalDesc.textContent = m.desc;
+  modal.classList.add('active');
+  gsap.fromTo('.dialog', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: .5, ease: 'power3.out' });
+}
+
+function closeModal() {
+  gsap.to('.dialog', { y: 20, opacity: 0, duration: .25, ease: 'power2.in', onComplete: () => {
+    modal.classList.remove('active');
+  }});
+}
+
+modalClose.addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+window.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+
+/* --------- 3D Scene --------- */
+const canvas = document.getElementById('scene');
+let renderer, scene, camera, mountain, stars, clouds = [], raf;
+let t = 0;
+
+function initScene() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a1424, 0.015);
+
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  camera = new THREE.PerspectiveCamera(55, w/h, 0.1, 2000);
+  camera.position.set(0, 38, 95);
+
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  onResize();
+
+  const hemi = new THREE.HemisphereLight(0x99ccff, 0x223044, 0.75);
+  scene.add(hemi);
+  const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+  dir.position.set(60, 120, 40);
+  scene.add(dir);
+
+  // Ground
+  const groundGeo = new THREE.PlaneGeometry(600, 400, 80, 80);
+  groundGeo.rotateX(-Math.PI/2);
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x243548, roughness: 1, metalness: 0, side: THREE.DoubleSide });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.position.y = -20;
+  scene.add(ground);
+
+  // Mountain (cone with displaced vertices)
+  const coneGeo = new THREE.ConeGeometry(40, 60, 120, 1, true);
+  displaceMountain(coneGeo);
+  const mountainMat = new THREE.MeshStandardMaterial({
+    color: 0x6b7c8a, roughness: 0.95, metalness: 0.1, flatShading: true
+  });
+  mountain = new THREE.Mesh(coneGeo, mountainMat);
+  mountain.position.y = -5;
+  scene.add(mountain);
+
+  // Snowcap via overlay
+  const snowGeo = coneGeo.clone();
+  const snowMat = new THREE.MeshStandardMaterial({ color: 0xeef3fb, roughness: 0.9, metalness: 0, flatShading: true });
+  const snow = new THREE.Mesh(snowGeo, snowMat);
+  snow.scale.set(0.98, 0.45, 0.98);
+  snow.position.y = 18;
+  scene.add(snow);
+
+  // Stars
+  const starGeo = new THREE.BufferGeometry();
+  const starCount = 1200;
+  const positions = new Float32Array(starCount * 3);
+  for(let i=0;i<starCount;i++){
+    positions[i*3] = (Math.random()-0.5)*800;
+    positions[i*3+1] = Math.random()*500 + 50;
+    positions[i*3+2] = (Math.random()-0.5)*800;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const starMat = new THREE.PointsMaterial({ color: 0x99ccff, size: 1.2, sizeAttenuation: true, transparent: true, opacity: 0.9 });
+  stars = new THREE.Points(starGeo, starMat);
+  scene.add(stars);
+
+  // Clouds (billboards)
+  const cloudTex = genCloudTexture();
+  for(let i=0;i<8;i++){
+    const spriteMat = new THREE.SpriteMaterial({ map: cloudTex, color: 0xffffff, opacity: 0.45 });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.position.set((Math.random()-0.5)*300, Math.random()*40 + 20, -Math.random()*200);
+    const s = Math.random()*60 + 40;
+    sprite.scale.set(s, s, 1);
+    clouds.push(sprite);
+    scene.add(sprite);
+  }
+
+  // Aurora tint overlay (for aurora theme)
+  const aurora = new THREE.Mesh(
+    new THREE.PlaneGeometry(800, 500),
+    new THREE.MeshBasicMaterial({ color: 0x00ffd2, transparent: true, opacity: 0.06 })
+  );
+  aurora.position.set(0, 120, -200);
+  scene.add(aurora);
+
+  animate();
+}
+
+function displaceMountain(geo) {
+  const pos = geo.attributes.position;
+  const v = new THREE.Vector3();
+  for(let i=0;i<pos.count;i++){
+    v.fromBufferAttribute(pos, i);
+    const r = Math.sqrt(v.x*v.x + v.z*v.z);
+    const noise = Math.sin(r*0.25 + Math.random()*0.3) * 2.5 + Math.cos(r*0.15) * 1.5;
+    v.x *= 1 + noise*0.02;
+    v.z *= 1 + noise*0.02;
+    v.y += Math.max(0, 1.2*noise);
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+}
+
+function genCloudTexture() {
+  const size = 256;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(size*0.5, size*0.5, size*0.1, size*0.5, size*0.5, size*0.5);
+  g.addColorStop(0, 'rgba(255,255,255,0.9)');
+  g.addColorStop(0.55, 'rgba(255,255,255,0.55)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(size*0.5, size*0.5, size*0.5, 0, Math.PI*2); ctx.fill();
+  return new THREE.CanvasTexture(c);
+}
+
+function animate() {
+  raf = requestAnimationFrame(animate);
+  t += 0.005;
+  mountain.rotation.y = t * 0.6;
+  stars.rotation.y = t * 0.2;
+
+  clouds.forEach((cl, i) => {
+    cl.position.x += Math.sin(t + i)*0.12 + 0.08;
+    if (cl.position.x > 220) cl.position.x = -220;
+  });
+
+  // subtle camera orbit
+  camera.position.x = Math.sin(t*0.6) * 32;
+  camera.position.z = 95 + Math.cos(t*0.6) * 8;
+  camera.lookAt(0, 10, 0);
+
+  renderer.setClearColor(0x0a1424, 1);
+  renderer.render(scene, camera);
+}
+
+function onResize(){
+  const w = canvas.clientWidth || canvas.offsetWidth;
+  const h = canvas.clientHeight || canvas.offsetHeight;
+  const rect = canvas.getBoundingClientRect();
+  const width = rect.width, height = rect.height;
+  renderer.setSize(width, height, false);
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+}
+
+window.addEventListener('resize', onResize);
+
+/* --------- Parallax --------- */
+const hero = document.querySelector('.hero');
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  const offset = clamp(y/3, 0, 160);
+  hero.style.transform = `translateY(${offset}px)`;
+});
+
+/* --------- Init --------- */
+renderCards(currentList);
+computeSuggestions();
+initScene();
+
+/* --------- Accessibility niceties --------- */
+// Focus trap example for modal (simple)
+document.addEventListener('keydown', (e) => {
+  if (!modal.classList.contains('active')) return;
+  if (e.key === 'Tab') {
+    const focusables = $$('button, [href], input, select, textarea', modal);
+    if (!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length-1];
+    if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
+    else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+  }
+});</script>
+</body>
+</html>
